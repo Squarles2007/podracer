@@ -32,14 +32,22 @@ def main(args = sys.argv[1:]):
     d = feedparser.parse(args.rss_url[0])
     if not args.all:
         for ep in d['entries'][:args.count]:
-            split = urllib.parse.urlsplit(ep['media_content'][0]['url'])
-            filename = split.path.split("/")[-1]
-            urllib.request.urlretrieve(ep['media_content'][0]['url'], filename)
+            for l in ep.links:
+                if (l.type == 'audio/mpeg'):
+                    split = urllib.parse.urlsplit(l.href)
+                    filename = split.path.split("/")[-1]
+                    urllib.request.urlretrieve(l.href, filename)
+                else:
+                    continue
     elif args.all:
-        for ep in d['entries']:
-            split = urllib.parse.urlsplit(ep['media_content'][0]['url'])
-            filename = split.path.split("/")[-1]
-            urllib.request.urlretrieve(ep['media_content'][0]['url'], filename)
+        for ep in d['entries'][:args.count]:
+            for l in ep.links:
+                if (l.type == 'audio/mpeg'):
+                    split = urllib.parse.urlsplit(l.href)
+                    filename = split.path.split("/")[-1]
+                    urllib.request.urlretrieve(l.href, filename)
+                else:
+                    continue
 
 
 if __name__ == '__main__':
