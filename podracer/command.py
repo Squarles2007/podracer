@@ -40,7 +40,7 @@ def main(args = sys.argv[1:]):
                 else:
                     continue
     elif args.all:
-        for ep in d['entries'][:args.count]:
+        for ep in d['entries']:
             for l in ep.links:
                 if (l.type == 'audio/mpeg'):
                     split = urllib.parse.urlsplit(l.href)
