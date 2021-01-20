@@ -11,7 +11,7 @@ before_install:
 - python setup.py develop
 
 script:
-- py.test --cov-report=term --cov=cli tests
+- py.test --cov-report=term --cov=podracer tests
 
 after_success:
 - coveralls

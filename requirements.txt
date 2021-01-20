@@ -1,2 +1,4 @@
 # Add required modules here.
-clint
+# clint
+feedparser
+urllib3

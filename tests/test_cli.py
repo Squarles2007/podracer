@@ -1,4 +1,4 @@
-from cli import command
+from podracer import command
 from tests.test_utilities import Capturing
 
 def test_square():

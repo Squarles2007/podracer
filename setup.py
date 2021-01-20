@@ -5,19 +5,19 @@ import os
 with open('requirements.txt') as f:
     required = [x for x in f.read().splitlines() if not x.startswith("#")]
 
-from cli import __version__, _program
+from podracer import __version__, _program
 
 setup(name=_program,
       version=__version__,
-      packages=['cli'],
+      packages=['podracer'],
       description='Skeleton commandline python project',
-      url='https://github.com/danielecook/python-cli-skeleton',
-      author='YOUR NAME',
-      author_email='youremail@email.com',
+      url='https://github.com/Squarles2007/podracer',
+      author='F. Davis Quarles',
+      author_email='f.davis.quarles@gmail.com',
       license='MIT',
       entry_points="""
       [console_scripts]
-      {program} = cli.command:main
+      {program} = podracer.command:main
       """.format(program = _program),
       keywords=[],
       tests_require=['pytest', 'coveralls'],
