@@ -1,9 +1,10 @@
 import sys
 import argparse
 from . import _program
-#from clint.textui import puts, indent, colored
+from clint.textui import puts, indent, colored
 import feedparser
 import urllib.request
+import warnings
 try:
     from urllib.parse import urlparse
 except ImportError:
@@ -16,39 +17,57 @@ def main(args = sys.argv[1:]):
                         nargs=1,
                         help="URL of podcast RSS feed",
                         type=str)
-    # Allow --day and --night options, but not together.
+    parser.add_argument("--test",
+                        "-t",
+                        help="Test mode: podracer will not download episodes",
+                        dest='test',
+                        action='store_true')
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--all",
-                       help = "download all episodes available in RSS feed",
-                       action = "store_true")
+                       help="download all episodes available in RSS feed",
+                       action="store_const",
+                       dest='count',
+                       const=-1)
     group.add_argument("--count",
                        "-c",
-                       help = "specify the number of recent episodes to download",
+                       help="specify the number of recent episodes to download",
                        type=int,
                        default=1)
-
+    parser.set_defaults(test=False)
     args = parser.parse_args(args)
 
-    d = feedparser.parse(args.rss_url[0])
-    if not args.all:
-        for ep in d['entries'][:args.count]:
-            for l in ep.links:
-                if (l.type == 'audio/mpeg'):
-                    split = urllib.parse.urlsplit(l.href)
-                    filename = split.path.split("/")[-1]
-                    urllib.request.urlretrieve(l.href, filename)
-                else:
-                    continue
-    elif args.all:
-        for ep in d['entries']:
-            for l in ep.links:
-                if (l.type == 'audio/mpeg'):
-                    split = urllib.parse.urlsplit(l.href)
-                    filename = split.path.split("/")[-1]
-                    urllib.request.urlretrieve(l.href, filename)
-                else:
-                    continue
+    # here is the actual program execution
+    parsefeed(args.rss_url[0], args.count, args.test)
 
 
 if __name__ == '__main__':
     main()
+
+# pass url of RSS feed, count of recent episodes to download, or none or neg int for all, test boolean to not download
+
+
+def parsefeed(url: str, count: int = -1, test: bool = False):
+    # parse the feed
+    d = feedparser.parse(url)
+    # for all episodes set count to length of feed
+    if count < 0:
+        count = len(d['entries'])
+    # handle requested number of episodes exceeding available
+    if count > len(d['entries']):
+        count = len(d['entries'])
+        warnings.warn("Reguested number of episodes exceeds available downloading all:" + str(len(d['entries'])))
+    # iterate episode listings and download
+    for ep in d['entries'][:count]:
+        # store a human readable name for file
+        filename = d.feed.title + " - " + ep.itunes_episode + " - " + ep.title + ".mp3"
+        # find the link with mime type audio/mpeg
+        for l in ep.links:
+            if l.type == 'audio/mpeg':
+                puts(colored.green('Downloading: ' + filename))
+                with(indent(4)):
+                    puts(colored.green('From: ' + l.href))
+                if not test:
+                    urllib.request.urlretrieve(l.href, filename)
+
+            else:
+                continue
