@@ -3,3 +3,4 @@ clint
 feedparser
 urllib3
 pathvalidate
+eyed3

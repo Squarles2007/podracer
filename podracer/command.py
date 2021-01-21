@@ -6,6 +6,9 @@ import feedparser
 import urllib.request
 import warnings
 from pathvalidate import sanitize_filename
+import eyed3
+from mimetypes import guess_type
+import os
 
 try:
     from urllib.parse import urlparse
@@ -24,6 +27,11 @@ def main(args = sys.argv[1:]):
                         help="Test mode: podracer will not download episodes",
                         dest='test',
                         action='store_true')
+    parser.add_argument("--pretty",
+                        "-P",
+                        help="Download Album Art and insert into mp3",
+                        dest='pretty',
+                        action='store_true')
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--all",
                        help="download all episodes available in RSS feed",
@@ -33,13 +41,12 @@ def main(args = sys.argv[1:]):
     group.add_argument("--count",
                        "-c",
                        help="specify the number of recent episodes to download",
-                       type=int,
-                       default=1)
-    parser.set_defaults(test=False)
+                       type=int,)
+    parser.set_defaults(test=False, pretty=False, count=1)
     args = parser.parse_args(args)
 
     # here is the actual program execution
-    parsefeed(args.rss_url[0], args.count, args.test)
+    parsefeed(args.rss_url[0], args.count, args.test, args.pretty)
 
 
 if __name__ == '__main__':
@@ -48,7 +55,7 @@ if __name__ == '__main__':
 # pass url of RSS feed, count of recent episodes to download, or none or neg int for all, test boolean to not download
 
 
-def parsefeed(url: str, count: int = -1, test: bool = False):
+def parsefeed(url: str, count: int = -1, test: bool = False, pretty: bool = False):
     # parse the feed
     d = feedparser.parse(url)
     # for all episodes set count to length of feed
@@ -59,10 +66,13 @@ def parsefeed(url: str, count: int = -1, test: bool = False):
         count = len(d['entries'])
         warnings.warn("Reguested number of episodes exceeds available downloading all:" + str(len(d['entries'])))
     # iterate episode listings and download
+    cover_url = None
+    cover_art_filenames = []
     for ep in d['entries'][:count]:
         # store a human readable name for file
         filename = sanitize_filename(d.feed.title + " - " + ep.itunes_episode + " - " + ep.title + ".mp3")
-        # find the link with mime type audio/mpeg
+        # find the link with mime type audio/mp3
+
         for l in ep.links:
             if l.type == 'audio/mpeg':
                 puts(colored.green('Downloading: ' + filename))
@@ -70,6 +80,27 @@ def parsefeed(url: str, count: int = -1, test: bool = False):
                     puts(colored.green('From: ' + l.href))
                 if not test:
                     urllib.request.urlretrieve(l.href, filename)
-
             else:
                 continue
+
+        if pretty:
+            #if no cover image stored yet or if coverart is not the same as last episode
+            mp3 = eyed3.load(filename)
+            if (cover_url is None) or (cover_url is not ep.image.href):
+                cover_url = ep.image.href
+                puts(colored.green('Downloading: ' + cover_url))
+                split = urllib.parse.urlsplit(cover_url)
+                artname = split.path.split("/")[-1]
+                urllib.request.urlretrieve(ep.image.href, artname)
+                if artname not in cover_art_filenames:
+                    cover_art_filenames.append(artname)
+            mime = guess_type(artname)
+            if mime[0] is not None:
+                mp3.tag.images.set(3, open(artname,'rb').read(), mime[0])
+                mp3.tag.save()
+    for f in cover_art_filenames:
+        os.remove(f)
+
+
+
+
