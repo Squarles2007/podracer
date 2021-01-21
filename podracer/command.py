@@ -5,10 +5,11 @@ from clint.textui import puts, indent, colored
 import feedparser
 import urllib.request
 import warnings
-from pathvalidate import sanitize_filename
+from pathvalidate import replace_symbol
 import eyed3
 from mimetypes import guess_type
 import os
+from datetime import datetime
 
 try:
     from urllib.parse import urlparse
@@ -70,7 +71,12 @@ def parsefeed(url: str, count: int = -1, test: bool = False, pretty: bool = Fals
     cover_art_filenames = []
     for ep in d['entries'][:count]:
         # store a human readable name for file
-        filename = sanitize_filename(d.feed.title + " - " + ep.itunes_episode + " - " + ep.title + ".mp3")
+        if 'ep.itunes_episode' in locals():
+            filename = replace_symbol(d.feed.title + " - " + ep.itunes_episode + " - " + ep.title + ".mp3", replacement_text='-')
+        else:
+            pub_date = datetime.strptime(ep.published, "%a, %d %b %Y %H:%M:%S %z")
+            filename = replace_symbol(d.feed.title + " - " + pub_date.strftime("%Y-%m-%d") + " - " + ep.title + ".mp3",
+                                      replacement_text='-')
         # find the link with mime type audio/mp3
 
         for l in ep.links:
@@ -86,6 +92,8 @@ def parsefeed(url: str, count: int = -1, test: bool = False, pretty: bool = Fals
         if pretty:
             #if no cover image stored yet or if coverart is not the same as last episode
             mp3 = eyed3.load(filename)
+            if (mp3.tag == None):
+                mp3.initTag()
             if (cover_url is None) or (cover_url is not ep.image.href):
                 cover_url = ep.image.href
                 puts(colored.green('Downloading: ' + cover_url))
@@ -95,6 +103,10 @@ def parsefeed(url: str, count: int = -1, test: bool = False, pretty: bool = Fals
                 if artname not in cover_art_filenames:
                     cover_art_filenames.append(artname)
             mime = guess_type(artname)
+            if mp3.tag.header.major_version == 2 and mp3.tag.header.minor_version == 2:
+                print('eyeD3 --to-v2.3 ' + '"' + filename + '"')
+                os.system('eyeD3 --to-v2.3 ' + '"' + filename + '"')
+                mp3 = eyed3.load(filename)
             if mime[0] is not None:
                 mp3.tag.images.set(3, open(artname,'rb').read(), mime[0])
                 mp3.tag.save()
