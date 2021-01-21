@@ -20,5 +20,6 @@ setup(name=_program,
       {program} = podracer.command:main
       """.format(program = _program),
       keywords=[],
+      install_requires=required,
       tests_require=['pytest', 'coveralls'],
       zip_safe=False)

@@ -5,6 +5,8 @@ from clint.textui import puts, indent, colored
 import feedparser
 import urllib.request
 import warnings
+from pathvalidate import sanitize_filename
+
 try:
     from urllib.parse import urlparse
 except ImportError:
@@ -59,7 +61,7 @@ def parsefeed(url: str, count: int = -1, test: bool = False):
     # iterate episode listings and download
     for ep in d['entries'][:count]:
         # store a human readable name for file
-        filename = d.feed.title + " - " + ep.itunes_episode + " - " + ep.title + ".mp3"
+        filename = sanitize_filename(d.feed.title + " - " + ep.itunes_episode + " - " + ep.title + ".mp3")
         # find the link with mime type audio/mpeg
         for l in ep.links:
             if l.type == 'audio/mpeg':
